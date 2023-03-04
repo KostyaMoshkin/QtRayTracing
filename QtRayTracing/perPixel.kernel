@@ -1,0 +1,146 @@
+float4 matrix_mul_vec(const float16 matrix_, const float4 vector_)
+{
+	float4 result = {
+		matrix_.s0 * vector_.s0 + matrix_.s4 * vector_.s1 + matrix_.s8 * vector_.s2 + matrix_.sC * vector_.s3, 
+		matrix_.s1 * vector_.s0 + matrix_.s5 * vector_.s1 + matrix_.s9 * vector_.s2 + matrix_.sD * vector_.s3, 
+		matrix_.s2 * vector_.s0 + matrix_.s6 * vector_.s1 + matrix_.sA * vector_.s2 + matrix_.sE * vector_.s3, 
+		matrix_.s3 * vector_.s0 + matrix_.s7 * vector_.s1 + matrix_.sB * vector_.s2 + matrix_.sF * vector_.s3 
+	};
+	return result;
+}
+
+float3 reflect(const float3 vec1_, const float3 normal_)
+{
+	float3 result = vec1_ - 2.0f * dot(normal_, vec1_) * normal_;
+	return result;
+}
+
+struct Sphere
+{
+	float3 position		__attribute__ ((aligned (16)));
+	float3 color		__attribute__ ((aligned (16)));
+	float fRadius		__attribute__ ((aligned (16)));
+	int nMaterialIndex	__attribute__ ((aligned (16)));
+};
+
+struct PayLoad
+{
+	float fHitDistance;
+	float3 rayNormal;
+	float3 rayDirection;
+	float3 color;
+	int nIndex;
+};
+
+struct PayLoad missTrace(const float3 rayOrigin_, const float3 rayDirection_)
+{
+	struct PayLoad payLoad;
+	payLoad.fHitDistance = -100.0f;
+
+	float3 skyColor = {0.5f, 0.5f, 1.0f};
+	payLoad.color = skyColor;
+
+	return payLoad;
+}
+
+struct PayLoad hit(const float3 rayOrigin_, const float3 rayDirection_, float fHitDistance_, int nCloseIndex_, global const struct Sphere* sphereBuffer_)
+{
+	struct PayLoad payLoad;
+	payLoad.fHitDistance = fHitDistance_;
+	payLoad.nIndex = nCloseIndex_;
+
+	float3 rayOrigin = rayOrigin_ - sphereBuffer_[nCloseIndex_].position;
+	payLoad.rayDirection = rayOrigin + rayDirection_ * fHitDistance_;
+	payLoad.rayNormal = normalize(payLoad.rayDirection);
+	payLoad.rayDirection += sphereBuffer_[nCloseIndex_].position;
+
+	return payLoad;
+}
+
+struct PayLoad rayTrace(const float3 rayOrigin_, const float3 rayDirection_, global const struct Sphere* sphereBuffer_, const int nFigureCount_)
+{
+	int nCloseIndex = -1;
+	float fMinHitDistance = HUGE_VALF;
+
+	for (int i = 0; i < nFigureCount_; ++i)
+	{
+		float3 rayOrigin = rayOrigin_ - sphereBuffer_[i].position;
+
+		float a = dot(rayDirection_, rayDirection_);
+		float b = 2 * dot(rayOrigin, rayDirection_);
+		float c = dot(rayOrigin, rayOrigin) - sphereBuffer_[i].fRadius * sphereBuffer_[i].fRadius;
+
+		float discremenant = b * b - 4 * a * c;
+
+		if (discremenant < 0.0f)
+			continue;
+
+		float fHitDistance = (-b - sqrt(discremenant)) / (2.0f * a);
+		if (fHitDistance > 0 && fMinHitDistance > fHitDistance)
+		{
+			fMinHitDistance = fHitDistance;
+			nCloseIndex = i;
+		}
+	}
+
+	if (nCloseIndex < 0)
+		return missTrace(rayOrigin_, rayDirection_);
+
+	return hit(rayOrigin_, rayDirection_, fMinHitDistance, nCloseIndex, sphereBuffer_);
+}
+
+void kernel perPixel_kernel(
+					global float3* m_screenBuffer, 
+					global struct Sphere* m_sphereBuffer,  
+					global float4* m_rayOriginBuffer, 
+					global float4* m_lightDirectionBuffer, 
+					global const float16* m_inverseProjectionBuffer, 
+					global const float16* m_inverseViewBuffer,  
+					__private int m_nFigureCount
+					)
+{
+		float2 coord = {(float)get_global_id(0) / get_global_size(0), (float)get_global_id(1) / get_global_size(1)};
+		coord = coord * 2.0f - 1.0f;
+
+		float4 vec1 = {coord.xy, 1.0f, 1.0f};
+
+		float4 target = matrix_mul_vec(*m_inverseProjectionBuffer, vec1 );
+
+		float4 vec2 = {normalize(target.xyz / target.w), 0};
+
+		float3 rayDirection = matrix_mul_vec(*m_inverseViewBuffer, vec2).xyz;
+
+		float3 sphereColor = {0, 0, 0};
+		float fIntencityMultiplier = 1.0f;
+
+		float3 rayOrigin = (*m_rayOriginBuffer).xyz;
+
+		int nBounce = 200;
+
+		for(int i = 0; i < nBounce; ++i)
+		{
+			struct PayLoad payLoad = rayTrace(rayOrigin, rayDirection, m_sphereBuffer, m_nFigureCount);
+
+			float fLightIntencity = 1;
+
+			if (payLoad.fHitDistance < 0)
+			{
+				sphereColor = sphereColor * (1.0f - fIntencityMultiplier) + payLoad.color * fLightIntencity * fIntencityMultiplier;
+				break;
+			}
+			else
+			{
+				float3 lightDirection = (*m_lightDirectionBuffer).xyz;
+				fLightIntencity = dot(payLoad.rayNormal, -lightDirection);
+				fLightIntencity = max(fLightIntencity, 0.0f) * 0.85f + 0.15f;
+			}
+
+			sphereColor = sphereColor * (1.0f - fIntencityMultiplier) + m_sphereBuffer[payLoad.nIndex].color * fLightIntencity * fIntencityMultiplier;
+			fIntencityMultiplier *= 0.4f;
+
+			rayOrigin = payLoad.rayDirection + payLoad.rayNormal * 0.0001f;
+			rayDirection = reflect(rayDirection, payLoad.rayNormal);
+		}
+		
+		m_screenBuffer[get_global_id(0) + get_global_id(1) * get_global_size(0)] = sphereColor;
+}
