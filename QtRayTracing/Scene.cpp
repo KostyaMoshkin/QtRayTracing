@@ -21,9 +21,8 @@ Scene::Scene()
 	std::vector<cl::Platform> vPlatform;
 	cl::Platform::get(&vPlatform);
 
-	if (vPlatform.size() == 0) {
+	if (vPlatform.size() == 0)
 		return;
-	}
 
 	auto platform = vPlatform.front();
 
@@ -41,9 +40,8 @@ Scene::Scene()
 
 	QFile kernelFile(":/QtRayTracing/perPixel.kernel");
 
-	if (!kernelFile.open(QIODevice::ReadOnly)) {
+	if (!kernelFile.open(QIODevice::ReadOnly)) 
 		return;
-	}
 
 	QString sKernelCode = kernelFile.readAll();
 
@@ -52,7 +50,8 @@ Scene::Scene()
 	//------------------------------------------------------------------------------------------
 
 	cl::Program program(m_context, sKernelCode.toStdString());
-	if (program.build({ m_device }) != CL_SUCCESS) {
+	if (program.build({ m_device }) != CL_SUCCESS) 
+	{
 		m_sErrorMessage = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device);
 		return;
 	}

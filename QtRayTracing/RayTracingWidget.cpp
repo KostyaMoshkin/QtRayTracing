@@ -32,6 +32,8 @@ void RayTracingWidget::initialize()
 
     m_timePoint = std::chrono::steady_clock::now();
 
+    //------------------------------------------------------------------------------------------
+
     static const char* vertexShaderSource =
         "#version 330 core\n"
         "layout (location = 0) in vec2 posAttr;\n"
@@ -40,6 +42,8 @@ void RayTracingWidget::initialize()
         "   gl_Position = vec4(posAttr, 1.0, 1.0);\n"
         "   TexCoord = 1.0 - (posAttr + 1.0) / 2.0;\n"
         "}\n";
+
+    //------------------------------------------------------------------------------------------
 
     static const char* fragmentShaderSource =
         "#version 330 core\n"
@@ -50,12 +54,16 @@ void RayTracingWidget::initialize()
         "   FragColor = texture(ourTexture, TexCoord);\n"
         "}\n";
 
+    //------------------------------------------------------------------------------------------
+
     m_program = new QOpenGLShaderProgram(this);
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
     m_program->link();
     m_posAttr = m_program->attributeLocation("posAttr");
     Q_ASSERT(m_posAttr != -1);
+
+    //------------------------------------------------------------------------------------------
 
     static const GLfloat vertices[] = {
          -1.0f,  -1.0f,
@@ -65,6 +73,8 @@ void RayTracingWidget::initialize()
          +1.0f,  -1.0f,
          -1.0f,  -1.0f
     };
+
+    //------------------------------------------------------------------------------------------
 
     glVertexAttribPointer(m_posAttr, 2, GL_FLOAT, GL_FALSE, 0, vertices);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -76,6 +86,8 @@ void RayTracingWidget::initialize()
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    //------------------------------------------------------------------------------------------
 
     m_program->release();
 }
@@ -90,6 +102,8 @@ bool RayTracingWidget::updateTexture()
 {
     if (m_texture == UINT_MAX)
         return false;
+
+    //------------------------------------------------------------------------------------------
 
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     std::chrono::milliseconds elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_timePoint);
@@ -108,6 +122,8 @@ bool RayTracingWidget::updateTexture()
     else
         ++m_nTimeTick;
 
+    //------------------------------------------------------------------------------------------
+
     float fMouseStep = 0.05;
 
     if (m_bKeyPress[(int)EKeyPress::key_left])
@@ -124,6 +140,8 @@ bool RayTracingWidget::updateTexture()
         m_nZoom = 0;
     }
 
+    //------------------------------------------------------------------------------------------
+
     if (m_ptMouseMove != QPoint(0, 0))
     {
         m_pCamera->rotate((float)m_ptMouseMove.y() * fMouseStep, -(float)m_ptMouseMove.x() * fMouseStep);
@@ -131,10 +149,14 @@ bool RayTracingWidget::updateTexture()
         m_ptMouseMove = QPoint(0, 0);
     }
 
+    //------------------------------------------------------------------------------------------
+
     if (!m_pCamera->isUpadated())
         return false;
 
     m_scene.process(m_pCamera);
+
+    //------------------------------------------------------------------------------------------
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_texture);
