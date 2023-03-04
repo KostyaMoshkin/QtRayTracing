@@ -114,7 +114,6 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="KeyPress.h" />
-    <ClInclude Include="Material.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Sphere.h" />
   </ItemGroup>

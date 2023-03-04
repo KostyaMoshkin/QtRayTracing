@@ -71,9 +71,6 @@
     <ClInclude Include="Sphere.h">
       <Filter>Ray</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
-      <Filter>Ray</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="perPixel.kernel">
