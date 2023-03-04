@@ -31,12 +31,14 @@ class Scene
 	std::string m_sErrorMessage;
 
 	float* m_pBuffer = nullptr;
-	int m_nWidth; 
-	int m_nHeight;
+	int m_nWidth = 0; 
+	int m_nHeight = 0;
 
-	glm::vec3 m_lightPosition;
+	glm::vec3 m_lightPosition = { 0, 0, 0 };
 
 	std::vector<Sphere> m_vSphere;
+
+	bool m_bInit = false;
 
 public:
 	Scene();

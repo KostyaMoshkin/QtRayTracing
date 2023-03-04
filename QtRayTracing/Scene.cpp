@@ -1,9 +1,12 @@
 #include "Scene.h"
 #include "Sphere.h"
 
+#include <QResource.h>
+#include <QFile.h>
+
 Scene::Scene()
 {
-	float fBigR = 50000.0f;
+	float fBigR = 50000.0f;  // This sphere is a "plane / table"
 	m_vSphere.push_back({ glm::vec3(0.0f, fBigR, 0.0f), fBigR, glm::vec3(0.3f, 0.3f, 0.3f), 0 });
 	m_vSphere.push_back({ glm::vec3(0.0f, -0.5f, -2.0f), 0.5f, glm::vec3(1, 0, 0), 0 });
 	m_vSphere.push_back({ glm::vec3(1.0f, -0.3f, -0.5f), 0.3f, glm::vec3(1, 0, 1), 0 });
@@ -12,6 +15,8 @@ Scene::Scene()
 	m_vSphere.push_back({ glm::vec3(-0.5f, -0.3f, 1.0f), 0.3f, glm::vec3(0.5f, 0.5f, 0), 0 });
 	m_vSphere.push_back({ glm::vec3(0.1f, -0.1f, 1.5f), 0.1f, glm::vec3(0.3f, 0.3f, 0.6f), 0 });
 	m_vSphere.push_back({ glm::vec3(0.1f, -0.9f, 0.5f), 0.3f, glm::vec3(0.1f, 0.9f, 0.6f), 0 });
+
+	//------------------------------------------------------------------------------------------
 
 	std::vector<cl::Platform> vPlatform;
 	cl::Platform::get(&vPlatform);
@@ -25,26 +30,34 @@ Scene::Scene()
 	std::vector<cl::Device> vDevice;
 	platform.getDevices(CL_DEVICE_TYPE_GPU, &vDevice);
 
-	if (vDevice.size() == 0) {
+	if (vDevice.size() == 0)
 		return;
-	}
 
 	m_device = vDevice.front();
 
 	m_context = cl::Context({ m_device });
-	cl::Program::Sources sources;
 
-	std::ifstream t("E:\\VisualStudioProjects\\QtRayTracing\\QtRayTracing\\perPixel.kernel");
-	std::string kernel_code((std::istreambuf_iterator<char>(t)),
-		std::istreambuf_iterator<char>());
+	//------------------------------------------------------------------------------------------
 
-	sources.push_back({ kernel_code.c_str(),kernel_code.length() });
+	QFile kernelFile(":/QtRayTracing/perPixel.kernel");
 
-	cl::Program program(m_context, sources);
+	if (!kernelFile.open(QIODevice::ReadOnly)) {
+		return;
+	}
+
+	QString sKernelCode = kernelFile.readAll();
+
+	kernelFile.close();
+
+	//------------------------------------------------------------------------------------------
+
+	cl::Program program(m_context, sKernelCode.toStdString());
 	if (program.build({ m_device }) != CL_SUCCESS) {
 		m_sErrorMessage = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(m_device);
 		return;
 	}
+
+	//------------------------------------------------------------------------------------------
 
 	m_sphereBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, sizeof(Sphere) * m_vSphere.size());
 	m_rayOriginBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, 4 * sizeof(float));
@@ -52,6 +65,7 @@ Scene::Scene()
 	m_inverseProjectionBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, sizeof(float) * 4 * 4);
 	m_inverseViewBuffer = cl::Buffer(m_context, CL_MEM_READ_ONLY, sizeof(float) * 4 * 4);
 
+	//------------------------------------------------------------------------------------------
 
 	m_kernel = cl::Kernel(program, "perPixel_kernel");
 	m_kernel.setArg(1, m_sphereBuffer);
@@ -63,9 +77,14 @@ Scene::Scene()
 	int nFigureCount = m_vSphere.size();
 	m_kernel.setArg(6, nFigureCount);
 
-	m_queue = cl::CommandQueue(m_context, m_device);
+	//------------------------------------------------------------------------------------------
 
+	m_queue = cl::CommandQueue(m_context, m_device);
 	m_queue.enqueueWriteBuffer(m_sphereBuffer, CL_TRUE, 0, sizeof(Sphere) * m_vSphere.size(), m_vSphere.data());
+
+	//------------------------------------------------------------------------------------------
+
+	m_bInit = true;
 }
 
 Scene::~Scene()
@@ -85,6 +104,9 @@ void Scene::setBuffer(float* pBuffer_, int nWidth_, int nHeight_)
 
 void Scene::process(Camera* pCamera_)
 {
+	if (!m_bInit)
+		return;
+
 	m_queue.enqueueWriteBuffer(m_sphereBuffer, CL_TRUE, 0, sizeof(Sphere) * m_vSphere.size(), m_vSphere.data());
 
 	glm::vec3 rayOrigin = pCamera_->getPosition();

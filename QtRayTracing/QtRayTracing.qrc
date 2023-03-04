@@ -1,4 +1,5 @@
 <RCC>
-    <qresource prefix="QtRayTracing">
+    <qresource prefix="/QtRayTracing">
+        <file>perPixel.kernel</file>
     </qresource>
 </RCC>
