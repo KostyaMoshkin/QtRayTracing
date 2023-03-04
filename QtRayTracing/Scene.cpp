@@ -1,7 +1,6 @@
 #include "Scene.h"
 #include "Sphere.h"
 
-#include <QResource.h>
 #include <QFile.h>
 
 Scene::Scene()

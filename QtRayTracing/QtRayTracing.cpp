@@ -5,9 +5,7 @@ QtRayTracing::QtRayTracing(QWidget *parent)
 {
     ui.setupUi(this);
 
-
     connect(ui.widget, &RayTracingWidget::putStatusInfo, this, &QtRayTracing::setStatusInfo);
-
 }
 
 QtRayTracing::~QtRayTracing()

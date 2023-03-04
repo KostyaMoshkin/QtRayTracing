@@ -14,6 +14,4 @@ struct Sphere
 public:
 	Sphere(glm::vec3 position_, float radius_, glm::vec3 color_, int nMaterialIndex_) 
 		: m_position(position_, 0), m_fRadius(radius_), m_color(color_, 0), m_nMaterialIndex(nMaterialIndex_) {  }
-
-public:
 };

@@ -1,10 +1,6 @@
 #include "Camera.h"
 
-#include <fstream>
-#include <streambuf>
-
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 Camera::Camera(float fVerticlaFOV_, float fNearClip_, float fFarClip_)
@@ -69,12 +65,12 @@ void Camera::rotate(float fPitch_, float fYaw_)
 {
 	glm::vec3 rightDirection = glm::cross(m_forwardDirection, m_upDirection);
 
-	glm::quat q = glm::normalize(glm::cross(
+	glm::quat quaternion = glm::normalize(glm::cross(
 		glm::angleAxis(-fPitch_ * 0.05f, rightDirection),
 		glm::angleAxis(-fYaw_ * 0.05f, m_upDirection)
 	));
 
-	m_forwardDirection = glm::rotate(q, m_forwardDirection);
+	m_forwardDirection = glm::rotate(quaternion, m_forwardDirection);
 
 	recalculateView();
 }
